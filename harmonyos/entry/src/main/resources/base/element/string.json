@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "记账应用入口模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "我的记账本"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "我的记账本"
+    }
+  ]
+}
