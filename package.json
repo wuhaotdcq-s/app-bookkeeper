@@ -1,0 +1,21 @@
+{
+  "name": "bookkeeper",
+  "version": "3.0.0",
+  "description": "我的记账本 —— 纯网页个人记账软件，数据存于 GitHub 私有仓库，手机电脑自动同步（零依赖）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "keywords": [
+    "bookkeeping",
+    "记账",
+    "personal-finance",
+    "github",
+    "sync",
+    "budget"
+  ],
+  "license": "MIT"
+}

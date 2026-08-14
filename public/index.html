@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#3b82f6">
+<title>我的记账本</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">¥</span>
+    <div>
+      <h1>我的记账本</h1>
+      <p class="muted">个人收支记录 · GitHub 自动同步 · 手机电脑通用</p>
+    </div>
+  </div>
+  <div class="ledger-box">
+    <label for="ledgerSelect" class="muted">账本</label>
+    <select id="ledgerSelect" title="切换账本"></select>
+    <button class="btn ghost" id="btnLedgers" title="新建 / 重命名 / 删除账本">管理</button>
+  </div>
+  <div class="top-actions">
+    <button class="sync-badge none" id="syncStatus" title="点击立即同步">○ 未连接</button>
+    <button class="btn ghost" id="btnSyncSettings" title="配置 GitHub 仓库与令牌">同步设置</button>
+    <button class="btn ghost" id="btnBudgets" title="设置每月预算">预算管理</button>
+    <button class="btn ghost" id="btnCats" title="管理收入/支出分类">分类管理</button>
+    <button class="btn ghost" id="btnExportCsv" title="导出 CSV，可用 Excel 打开">导出 CSV</button>
+    <button class="btn ghost" id="btnExportJson" title="导出 JSON 备份">导出 JSON</button>
+    <button class="btn ghost" id="btnImport" title="从 JSON 备份导入">导入</button>
+    <input type="file" id="fileImport" accept=".json,application/json" hidden>
+    <button class="btn primary" id="btnAdd">＋ 记一笔</button>
+  </div>
+</header>
+
+<section class="summary">
+  <div class="card exp">
+    <span class="label">本月支出</span>
+    <span class="value" id="sumExpense">0.00</span>
+  </div>
+  <div class="card inc">
+    <span class="label">本月收入</span>
+    <span class="value" id="sumIncome">0.00</span>
+  </div>
+  <div class="card bal">
+    <span class="label">本月结余</span>
+    <span class="value" id="sumBalance">0.00</span>
+  </div>
+  <div class="card cnt">
+    <span class="label">本月笔数</span>
+    <span class="value" id="sumCount">0</span>
+  </div>
+</section>
+
+<section class="filters">
+  <input type="month" id="filterMonth" title="按月份筛选">
+  <select id="filterType" title="按类型筛选">
+    <option value="">全部类型</option>
+    <option value="expense">支出</option>
+    <option value="income">收入</option>
+  </select>
+  <select id="filterCategory" title="按分类筛选"><option value="">全部分类</option></select>
+  <input type="search" id="filterQ" placeholder="搜索备注 / 分类" title="搜索备注或分类">
+  <span class="filter-info" id="filterInfo"></span>
+</section>
+
+<main class="layout">
+  <section class="panel table-panel">
+    <div class="panel-head">
+      <h2>收支明细</h2>
+      <span class="muted" id="recordCount"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="recordsTable">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>类型</th>
+            <th>分类</th>
+            <th>备注</th>
+            <th class="num">金额</th>
+            <th class="ops">操作</th>
+          </tr>
+        </thead>
+        <tbody id="recordsBody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emptyTip" hidden>暂无记录，点击右上角「记一笔」开始吧～</div>
+  </section>
+
+  <aside class="side">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>本月预算</h2>
+        <button class="btn small" id="btnOpenBudgets">设置</button>
+      </div>
+      <div id="budgetBox">
+        <div class="muted center" style="padding:12px 0">尚未设置预算</div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>分类占比</h2></div>
+      <div class="seg" id="segByType">
+        <button type="button" data-t="expense" class="active">支出</button>
+        <button type="button" data-t="income">收入</button>
+      </div>
+      <div id="byCategory" class="by-category"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>近 6 个月趋势</h2>
+        <span class="legend"><i class="dot inc"></i>收入<i class="dot exp"></i>支出</span>
+      </div>
+      <canvas id="trendChart" height="180"></canvas>
+    </section>
+  </aside>
+</main>
+
+<footer class="foot muted">数据自动同步到你的 GitHub 私有仓库 · 建议定期「导出 JSON」备份</footer>
+
+<!-- 记账弹窗 -->
+<div class="modal-mask" id="recordModal" hidden>
+  <div class="modal">
+    <h3 id="modalTitle">记一笔</h3>
+    <form id="recordForm" autocomplete="off">
+      <input type="hidden" id="fId">
+      <div class="seg big" id="segType">
+        <button type="button" data-t="expense" class="active">支出</button>
+        <button type="button" data-t="income">收入</button>
+      </div>
+      <label>金额（元）
+        <input type="number" id="fAmount" step="0.01" min="0.01" required placeholder="0.00">
+      </label>
+      <label>分类
+        <select id="fCategory" required></select>
+      </label>
+      <label>日期
+        <input type="date" id="fDate" required>
+      </label>
+      <label>备注
+        <input type="text" id="fNote" maxlength="200" placeholder="选填">
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" id="btnCancel">取消</button>
+        <button type="submit" class="btn primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 分类管理弹窗 -->
+<div class="modal-mask" id="catsModal" hidden>
+  <div class="modal wide">
+    <h3>分类管理</h3>
+    <p class="muted">可新增自定义分类；内置分类不可删除。删除分类不影响已有记录。</p>
+    <div class="cat-grid">
+      <div>
+        <h4>支出分类</h4>
+        <ul id="catExpense" class="cat-list"></ul>
+        <div class="cat-add">
+          <input type="text" id="newExpenseCat" maxlength="20" placeholder="新支出分类">
+          <button type="button" class="btn small" data-add="expense">添加</button>
+        </div>
+      </div>
+      <div>
+        <h4>收入分类</h4>
+        <ul id="catIncome" class="cat-list"></ul>
+        <div class="cat-add">
+          <input type="text" id="newIncomeCat" maxlength="20" placeholder="新收入分类">
+          <button type="button" class="btn small" data-add="income">添加</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="btnCloseCats">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 账本管理弹窗 -->
+<div class="modal-mask" id="ledgerModal" hidden>
+  <div class="modal wide">
+    <h3>账本管理</h3>
+    <p class="muted">账本之间相互独立（记录、预算互不影响），可分别规划不同用途的账。</p>
+    <ul id="ledgerList" class="cat-list ledger-list"></ul>
+    <div class="cat-add">
+      <input type="text" id="newLedgerName" maxlength="30" placeholder="新账本名称，如：家庭 / 旅行 / 项目">
+      <button type="button" class="btn small" id="btnAddLedger">新建账本</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="btnCloseLedgers">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 预算管理弹窗 -->
+<div class="modal-mask" id="budgetModal" hidden>
+  <div class="modal wide">
+    <h3>预算管理</h3>
+    <p class="muted">预算按月循环：设置后每月自动对比当月支出。总预算是本月支出总额上限，分类预算按类别分别控制。</p>
+    <label class="budget-overall-label">每月总预算（元）
+      <input type="number" id="budgetOverall" step="0.01" min="0" placeholder="如：3000">
+    </label>
+    <div class="budget-cats">
+      <h4>分类预算（仅支出分类）</h4>
+      <ul id="budgetList" class="cat-list budget-list"></ul>
+      <div class="cat-add">
+        <select id="budgetCatSelect"></select>
+        <input type="number" id="budgetCatAmount" step="0.01" min="0" placeholder="金额">
+        <button type="button" class="btn small" id="btnAddBudgetCat">添加</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="btnCloseBudgets">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- GitHub 同步设置弹窗 -->
+<div class="modal-mask" id="syncModal" hidden>
+  <div class="modal wide">
+    <h3>GitHub 同步设置</h3>
+    <p class="muted hint">数据将自动同步到你的 <b>GitHub 私有仓库</b>。首次配置：① 在 GitHub 新建一个私有仓库（如 <code>bookkeeper-data</code>）；② 生成一个 <b>fine-grained Token</b>，只授予该仓库的 <code>Contents: Read and write</code> 权限。详细步骤见 README。</p>
+    <div id="legacyHint" class="legacy-hint" hidden></div>
+    <div id="syncError" class="sync-error" hidden></div>
+    <label>仓库所有者（GitHub 用户名）
+      <input type="text" id="syncOwner" placeholder="例如 zhangsan" autocomplete="off">
+    </label>
+    <label>仓库名
+      <input type="text" id="syncRepo" placeholder="例如 bookkeeper-data" autocomplete="off">
+    </label>
+    <label>Token（仅保存在本浏览器，请勿外传）
+      <input type="password" id="syncToken" placeholder="github_pat_..." autocomplete="off">
+    </label>
+    <p class="muted small">保存后立即执行一次同步；之后每 60 秒自动检测云端变化，本地修改也会自动推送（最多 3 次冲突重试）。</p>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="btnSyncTest">测试连接</button>
+      <button type="button" class="btn ghost" id="btnSyncCancel">取消</button>
+      <button type="button" class="btn primary" id="btnSyncSave">保存并同步</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="sync-core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

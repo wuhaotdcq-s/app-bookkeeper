@@ -1,0 +1,2 @@
+# 统一文本文件行尾为 LF（仓库内存储），消除 Windows 上的 LF/CRLF 警告
+* text=auto
